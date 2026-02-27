@@ -1,869 +1,217 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>日程管理 - Morandi</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    /* 基础配色（莫兰迪） */
-    :root {
-      --mint: #C1D2C1;
-      --cream: #DBCAB5;
-      --mauve: #DFD6DB;
-      --blue: #ADC4D4;
-      --red: #E2A6A1;
-      --ink: #2F2F2F;
-      --bg: #F7F5F2;
-      --app-bg: radial-gradient(circle at 20% 20%, #F1EEE9 0%, var(--bg) 60%),
-                radial-gradient(circle at 80% 0%, #ECE6E1 0%, var(--bg) 55%);
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的莫兰迪手帐</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap');
+        
+        :root {
+            --mint: #C1D2C1; --orange: #DBCAB5; --mauve: #DFD6DB;
+            --blue: #ADC4D4; --red: #E2A6A1;
+        }
 
-    body {
-      font-family: "Playfair Display", "Georgia", serif;
-      color: var(--ink);
-      background: var(--app-bg);
-      transition: background 0.5s ease;
-    }
+        body {
+            /* 使用你提供的油画质感背景图作为底色 */
+            background: #F9F9F9;
+            font-family: -apple-system, sans-serif;
+            overflow: hidden;
+        }
 
-    .soft-card {
-      box-shadow: 0 10px 28px rgba(35, 35, 35, 0.08);
-    }
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
 
-    .glass-panel {
-      background: rgba(255, 255, 255, 0.6);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(47, 47, 47, 0.08);
-      border-radius: 16px;
-      padding: 16px;
-    }
+        /* 邮戳印章效果 - 模拟你提供的素材图 1000021443 */
+        .postmark-seal {
+            width: 120px;
+            height: 120px;
+            border: 2px solid rgba(139, 115, 85, 0.2);
+            border-radius: 50%;
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: rotate(15deg);
+            pointer-events: none;
+        }
 
-    .timeline-line {
-      position: absolute;
-      left: 14px;
-      top: 0;
-      bottom: 0;
-      width: 2px;
-      background: rgba(47, 47, 47, 0.15);
-    }
+        .postmark-content {
+            border: 1px solid rgba(139, 115, 85, 0.2);
+            border-radius: 50%;
+            width: 90%;
+            height: 90%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            color: rgba(139, 115, 85, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
 
-    .dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-      background: var(--blue);
-    }
+        .font-handwriting { font-family: 'Ma+Shan+Zheng', cursive; }
 
-    .hand-drawn {
-      font-family: "Caveat", "Comic Sans MS", cursive;
-    }
+        /* 时间轴圆点 */
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        }
 
-    .journal-hand {
-      font-family: "Kalam", "Caveat", "Comic Sans MS", cursive;
-      letter-spacing: 0.04em;
-    }
-
-    .tab-btn.active {
-      background: var(--cream);
-    }
-
-    .project-item:hover .project-delete,
-    .task-card:hover .task-delete {
-      opacity: 1;
-    }
-
-    .editable {
-      cursor: text;
-    }
-
-    /* 电子日记：杂志式瀑布流布局 */
-    #journal {
-      position: relative;
-      overflow: hidden;
-    }
-
-    #journal::before {
-      content: "";
-      position: absolute;
-      inset: -20% -10% auto -10%;
-      height: 120%;
-      background:
-        radial-gradient(200px 160px at 18% 20%, rgba(173, 196, 212, 0.35), transparent 70%),
-        radial-gradient(220px 180px at 70% 10%, rgba(223, 214, 219, 0.4), transparent 70%),
-        radial-gradient(260px 220px at 30% 70%, rgba(219, 202, 181, 0.35), transparent 72%),
-        radial-gradient(240px 200px at 80% 78%, rgba(193, 210, 193, 0.32), transparent 70%);
-      filter: blur(18px);
-      opacity: 0.9;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    #journal::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background:
-        repeating-linear-gradient(0deg, rgba(47, 47, 47, 0.03) 0, rgba(47, 47, 47, 0.03) 1px, transparent 1px, transparent 14px),
-        repeating-linear-gradient(90deg, rgba(47, 47, 47, 0.02) 0, rgba(47, 47, 47, 0.02) 1px, transparent 1px, transparent 14px);
-      opacity: 0.35;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .journal-decor {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      z-index: 1;
-    }
-
-    .decor-line {
-      position: absolute;
-      top: 14px;
-      right: 28px;
-      width: 120px;
-      height: 1px;
-      background: rgba(47, 47, 47, 0.25);
-      transform: rotate(-6deg);
-    }
-
-    .decor-dots {
-      position: absolute;
-      bottom: 18px;
-      left: 24px;
-      width: 54px;
-      height: 16px;
-      background:
-        radial-gradient(circle, rgba(47, 47, 47, 0.35) 2px, transparent 3px) 0 0 / 12px 12px,
-        radial-gradient(circle, rgba(47, 47, 47, 0.25) 2px, transparent 3px) 6px 6px / 12px 12px;
-      opacity: 0.6;
-    }
-
-    .decor-date {
-      position: absolute;
-      top: 40px;
-      left: 20px;
-      font-size: 12px;
-      letter-spacing: 0.5em;
-      color: rgba(47, 47, 47, 0.35);
-      transform: rotate(-2deg);
-    }
-
-    .journal-grid {
-      column-count: 1;
-      column-gap: 18px;
-      position: relative;
-      z-index: 2;
-    }
-
-    @media (min-width: 768px) {
-      .journal-grid {
-        column-count: 2;
-      }
-    }
-
-    @media (min-width: 1024px) {
-      .journal-grid {
-        column-count: 3;
-      }
-    }
-
-    .journal-card {
-      break-inside: avoid;
-      margin-bottom: 18px;
-      border-radius: 22px 16px 24px 14px;
-      border: 2px dashed rgba(47, 47, 47, 0.2);
-      background: #fff;
-      position: relative;
-      padding: 20px 18px 18px;
-      box-shadow: 0 18px 36px rgba(35, 35, 35, 0.12);
-    }
-
-    /* 非对称微旋转，营造杂志拼贴感 */
-    .journal-card:nth-child(3n + 1) { transform: rotate(-0.8deg); }
-    .journal-card:nth-child(3n + 2) { transform: rotate(0.9deg); }
-    .journal-card:nth-child(3n + 3) { transform: rotate(-0.3deg); }
-
-    .journal-card::after {
-      content: "";
-      position: absolute;
-      inset: 10px;
-      border: 2px solid rgba(47, 47, 47, 0.08);
-      border-radius: 18px 12px 20px 14px;
-      pointer-events: none;
-    }
-
-    /* 复盘区域：油画感叠加 */
-    .ornate-frame {
-      position: relative;
-      padding: 16px 16px 14px;
-      border-radius: 18px 12px 20px 14px;
-      background: #fff;
-      border: 2px solid rgba(47, 47, 47, 0.16);
-      box-shadow: inset 0 0 0 2px rgba(173, 196, 212, 0.25);
-      overflow: hidden;
-    }
-
-    .ornate-frame::before {
-      content: "";
-      position: absolute;
-      inset: -10px;
-      background:
-        radial-gradient(120px 90px at 15% 20%, rgba(173, 196, 212, 0.55), transparent 70%),
-        radial-gradient(140px 110px at 80% 25%, rgba(223, 214, 219, 0.6), transparent 72%),
-        radial-gradient(160px 120px at 30% 85%, rgba(219, 202, 181, 0.55), transparent 75%),
-        radial-gradient(140px 120px at 85% 80%, rgba(193, 210, 193, 0.5), transparent 70%);
-      filter: blur(14px);
-      opacity: 0.9;
-      pointer-events: none;
-    }
-
-    /* 纸张质感与淡淡网格纹 */
-    .ornate-frame::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background:
-        repeating-linear-gradient(0deg, rgba(47, 47, 47, 0.04) 0, rgba(47, 47, 47, 0.04) 1px, transparent 1px, transparent 12px),
-        repeating-linear-gradient(90deg, rgba(47, 47, 47, 0.035) 0, rgba(47, 47, 47, 0.035) 1px, transparent 1px, transparent 12px);
-      opacity: 0.5;
-      pointer-events: none;
-      mix-blend-mode: multiply;
-    }
-
-    .doodle-line {
-      height: 2px;
-      background: repeating-linear-gradient(90deg, rgba(47, 47, 47, 0.4), rgba(47, 47, 47, 0.4) 6px, transparent 6px, transparent 10px);
-    }
-
-    /* 日期圆形戳（装饰） */
-    .date-badge {
-      width: 52px;
-      height: 52px;
-      border-radius: 999px;
-      border: 2px solid rgba(47, 47, 47, 0.25);
-      display: grid;
-      place-items: center;
-      font-size: 12px;
-      color: rgba(47, 47, 47, 0.7);
-      transform: rotate(-6deg);
-      background: var(--mauve);
-    }
-
-    .quote-editable {
-      cursor: text;
-    }
-
-    /* 日历圆点 */
-    .cal-dot {
-      width: 11px;
-      height: 11px;
-      border-radius: 999px;
-      display: inline-block;
-    }
-
-    /* 时间轴截止日期强调 */
-    .deadline-text {
-      color: var(--blue);
-      font-weight: 700;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-    }
-
-    .deadline-text::before {
-      content: "";
-    }
-
-    .deadline-input {
-      border: 1px solid rgba(47, 47, 47, 0.18);
-      border-radius: 8px;
-      padding: 2px 6px;
-      font-size: 12px;
-      background: #fff;
-    }
-
-    /* 背景选择浮窗 */
-    .bg-panel {
-      position: absolute;
-      top: 42px;
-      left: 0;
-      width: 220px;
-      background: rgba(255, 255, 255, 0.92);
-      border: 1px solid rgba(47, 47, 47, 0.12);
-      border-radius: 12px;
-      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.12);
-      padding: 10px;
-      z-index: 50;
-      display: none;
-    }
-
-    .bg-panel.show {
-      display: block;
-    }
-
-    .bg-swatch {
-      width: 22px;
-      height: 22px;
-      border-radius: 999px;
-      border: 1px solid rgba(47, 47, 47, 0.12);
-      cursor: pointer;
-    }
-
-    .bg-label {
-      font-size: 12px;
-      color: rgba(47, 47, 47, 0.7);
-      margin: 6px 0 4px;
-    }
-
-    .bg-input {
-      width: 100%;
-      border: 1px solid rgba(47, 47, 47, 0.16);
-      border-radius: 8px;
-      padding: 6px 8px;
-      font-size: 12px;
-      background: #fff;
-    }
-  </style>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Caveat:wght@500;600&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+        .journal-paper {
+            background: #fff;
+            background-image: radial-gradient(#e5e5e5 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+    </style>
 </head>
-<body class="min-h-screen">
-  <div class="grid min-h-screen" style="grid-template-columns: 260px 1fr;">
-    <aside class="p-5 border-r border-black/5 relative" style="background: var(--mauve);">
-      <div class="flex items-center justify-between mb-3">
-        <div class="text-lg font-semibold tracking-wide">我的项目</div>
-        <button id="bgToggle" class="w-8 h-8 rounded-full bg-white/70 border border-black/10 flex items-center justify-center" title="自定义背景">🎨</button>
-      </div>
-      <div id="bgPanel" class="bg-panel">
-        <div class="bg-label">莫兰迪纯色</div>
-        <div class="flex items-center gap-2 mb-2">
-          <button class="bg-swatch" data-bg="solid" data-value="#F4F1ED" style="background:#F4F1ED"></button>
-          <button class="bg-swatch" data-bg="solid" data-value="#F0E6E0" style="background:#F0E6E0"></button>
-          <button class="bg-swatch" data-bg="solid" data-value="#E9EEF0" style="background:#E9EEF0"></button>
-          <button class="bg-swatch" data-bg="solid" data-value="#EFE9F1" style="background:#EFE9F1"></button>
+<body class="h-screen flex">
+
+    <!-- 侧边栏：项目列表 -->
+    <aside class="w-80 h-full glass border-r p-8 flex flex-col z-20">
+        <h1 class="text-3xl font-serif italic mb-12 tracking-tighter">Handy.</h1>
+        <div id="project-list" class="flex-1 space-y-4 overflow-y-auto pr-2">
+            <!-- 项目列表 -->
         </div>
-        <div class="bg-label">艺术渐变</div>
-        <button id="bgArt" class="w-full rounded-lg px-2 py-1 text-xs font-semibold" style="background: var(--blue);">应用艺术渐变</button>
-        <div class="bg-label">自定义图片</div>
-        <input id="bgUrl" class="bg-input" placeholder="粘贴图片 URL" />
-        <button id="bgApply" class="w-full rounded-lg px-2 py-1 text-xs font-semibold mt-2" style="background: var(--cream);">应用图片背景</button>
-      </div>
-      <ul id="projectList" class="space-y-2 mb-4"></ul>
-      <button id="addProjectBtn" class="w-full rounded-lg px-3 py-2 font-semibold text-sm" style="background: var(--blue);">新增项目</button>
+        <button onclick="addProject()" class="mt-8 w-full py-4 rounded-full text-white font-bold shadow-lg active:scale-95 transition-all bg-[#ADC4D4]">
+            + 新增项目
+        </button>
     </aside>
 
-    <main class="p-6">
-      <div class="flex items-center justify-between mb-4">
-        <div id="projectTitle" class="text-2xl font-semibold">我的项目</div>
-        <div class="flex gap-2">
-          <button class="tab-btn active rounded-full border border-black/10 px-4 py-2 text-sm" data-tab="timeline">时间轴</button>
-          <button class="tab-btn rounded-full border border-black/10 px-4 py-2 text-sm" data-tab="calendar">月视图</button>
-          <button class="tab-btn rounded-full border border-black/10 px-4 py-2 text-sm" data-tab="journal">电子日记</button>
+    <!-- 主展示区 -->
+    <main class="flex-1 flex flex-col relative overflow-hidden">
+        <!-- 模拟你提供的邮戳素材 -->
+        <div class="postmark-seal">
+            <div class="postmark-content">
+                <span class="font-bold">Post Office</span>
+                <span class="my-1">2026.03</span>
+                <span>Paris, FR</span>
+            </div>
         </div>
-      </div>
 
-      <section id="timeline" class="panel glass-panel">
-        <div id="timelineBody" class="relative pl-8"></div>
-        <button id="addTaskBtn" class="mt-4 rounded-lg px-4 py-2 text-sm font-semibold" style="background: var(--cream);">新增任务</button>
-      </section>
+        <header class="p-12 flex justify-between items-end">
+            <div id="project-header">
+                <!-- 动态标题 -->
+            </div>
+            <nav class="flex glass p-1 rounded-full border border-white/50 shadow-sm">
+                <button onclick="setTab('timeline')" id="tab-t" class="px-8 py-2 rounded-full text-xs font-bold tracking-widest transition-all">时间轴</button>
+                <button onclick="setTab('journal')" id="tab-j" class="px-8 py-2 rounded-full text-xs font-bold tracking-widest transition-all">电子日记</button>
+            </nav>
+        </header>
 
-      <section id="calendar" class="panel hidden glass-panel">
-        <div class="rounded-lg p-4">
-          <div class="flex items-center justify-between mb-3">
-            <button id="prevMonth" class="rounded-lg px-3 py-2 text-sm font-semibold" style="background: var(--blue);">上个月</button>
-            <div id="calTitle" class="font-semibold"></div>
-            <button id="nextMonth" class="rounded-lg px-3 py-2 text-sm font-semibold" style="background: var(--blue);">下个月</button>
-          </div>
-          <div class="grid grid-cols-7 gap-2 text-xs" id="calGrid"></div>
-        </div>
-      </section>
-
-      <section id="journal" class="panel hidden glass-panel">
-        <div class="journal-decor">
-          <div class="decor-line"></div>
-          <div class="decor-dots"></div>
-          <div class="decor-date">DATE</div>
-        </div>
-        <div class="journal-grid" id="journalGrid"></div>
-      </section>
+        <section id="content" class="flex-1 overflow-y-auto px-12 pb-12">
+            <!-- 动态内容 -->
+        </section>
     </main>
-  </div>
 
-  <script>
-    // 全局状态
-    const state = {
-      projects: [
-        {
-          id: "p1",
-          name: "我的项目 1",
-          tasks: [
-            { id: "t1", title: "提交周报", deadline: "2026-03-02", remark: "汇总关键进度", review: "", quote: "每一天的努力都算数", done: false },
-            { id: "t2", title: "复盘会议", deadline: "2026-03-05", remark: "准备议程", review: "节奏不错；下次请更清晰地总结结论。", quote: "稳住节奏，稳住心态", done: true },
-            { id: "t3", title: "学习冲刺", deadline: "2026-03-10", remark: "完成第 3 章", review: "", quote: "继续前进，保持专注", done: false }
-          ]
-        },
-        {
-          id: "p2",
-          name: "产品迭代",
-          tasks: [
-            { id: "t4", title: "用户访谈", deadline: "2026-03-01", remark: "访谈 5 位用户", review: "洞察集中在速度与清晰度。", quote: "倾听是最好的开始", done: true },
-            { id: "t5", title: "方案评审", deadline: "2026-03-07", remark: "准备可视化讲解", review: "", quote: "细节会说话", done: false }
-          ]
+    <script>
+        let state = JSON.parse(localStorage.getItem('morandi_diary')) || {
+            activeId: 'p1',
+            tab: 'timeline',
+            projects: [{
+                id: 'p1', title: '我的项目 1', quote: '愿你眼中总有光芒，活成你想要的模样。',
+                tasks: [
+                    { title: '复盘会议', deadline: '2026-03-05', completed: true, review: '节奏不错；下次请更清晰地总结结论。' },
+                    { title: '学习冲刺', deadline: '2026-03-10', completed: false, review: '' }
+                ]
+            }]
+        };
+
+        function save() { 
+            localStorage.setItem('morandi_diary', JSON.stringify(state)); 
+            render(); 
         }
-      ],
-      currentProjectId: "p1",
-      currentTab: "timeline",
-      monthOffset: 0,
-      isRenaming: false
-    };
 
-    const $ = (sel) => document.querySelector(sel);
-
-    function todayISO() {
-      const d = new Date();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return `${d.getFullYear()}-${m}-${day}`;
-    }
-
-    function getProject() {
-      return state.projects.find(p => p.id === state.currentProjectId);
-    }
-
-    function sortTasks(tasks) {
-      return [...tasks].sort((a, b) => a.deadline.localeCompare(b.deadline));
-    }
-
-    function statusColor(task) {
-      const overdue = !task.done && todayISO() > task.deadline;
-      if (overdue) return "var(--red)";
-      if (task.done) return "var(--mint)";
-      return "var(--cream)";
-    }
-
-    // 背景切换
-    function applyBackground(value) {
-      document.documentElement.style.setProperty("--app-bg", value);
-    }
-
-    // 通用可编辑标题（支持点击或双击触发）
-    function makeEditable(element, initialValue, onSave, trigger = "click") {
-      element.classList.add("editable");
-      const startEdit = (e) => {
-        if (e) e.stopPropagation();
-        state.isRenaming = true;
-
-        const input = document.createElement("input");
-        input.type = "text";
-        input.value = initialValue();
-        input.className = "w-full rounded-lg border border-black/10 px-2 py-1 text-sm bg-white";
-        element.replaceWith(input);
-        input.focus();
-        input.select();
-
-        const save = () => {
-          const nextValue = input.value.trim();
-          if (nextValue) onSave(nextValue);
-          state.isRenaming = false;
-          renderAll();
-        };
-
-        input.onblur = save;
-        input.onkeydown = (evt) => {
-          if (evt.key === "Enter") save();
-        };
-      };
-
-      if (trigger === "dblclick") {
-        element.ondblclick = startEdit;
-      } else {
-        element.onclick = startEdit;
-      }
-    }
-
-    // 截止日期可编辑
-    function makeDateEditable(element, task) {
-      element.onclick = (e) => {
-        e.stopPropagation();
-        const input = document.createElement("input");
-        input.type = "date";
-        input.value = task.deadline;
-        input.className = "deadline-input";
-        element.replaceWith(input);
-        input.focus();
-
-        const save = () => {
-          if (input.value) task.deadline = input.value;
-          renderAll();
-        };
-
-        input.onblur = save;
-        input.onkeydown = (evt) => {
-          if (evt.key === "Enter") save();
-        };
-      };
-    }
-
-    function renderProjects() {
-      const list = $("#projectList");
-      list.innerHTML = "";
-      state.projects.forEach(p => {
-        const li = document.createElement("li");
-        li.className = "project-item rounded-lg px-3 py-2 cursor-pointer transition flex items-center justify-between gap-2" + (p.id === state.currentProjectId ? " translate-x-1" : "");
-        li.style.background = p.id === state.currentProjectId ? "var(--cream)" : "rgba(255,255,255,0.6)";
-
-        // 单击切换项目
-        li.onclick = () => {
-          if (state.isRenaming) return;
-          state.currentProjectId = p.id;
-          renderAll();
-        };
-
-        const name = document.createElement("div");
-        name.className = "flex-1 text-sm";
-        name.textContent = p.name;
-        // 双击进入重命名
-        makeEditable(name, () => p.name, (value) => p.name = value, "dblclick");
-
-        const del = document.createElement("button");
-        del.className = "project-delete text-xs opacity-60 hover:opacity-100 transition";
-        del.textContent = "✕";
-        del.onclick = (e) => {
-          e.stopPropagation();
-          state.projects = state.projects.filter(item => item.id !== p.id);
-          if (state.projects.length === 0) {
-            state.projects.push({ id: "p" + Math.random().toString(36).slice(2, 8), name: "我的项目", tasks: [] });
-          }
-          state.currentProjectId = state.projects[0].id;
-          renderAll();
-        };
-
-        li.appendChild(name);
-        li.appendChild(del);
-        list.appendChild(li);
-      });
-      $("#projectTitle").textContent = getProject().name;
-    }
-
-    function renderTimeline() {
-      const body = $("#timelineBody");
-      body.innerHTML = "";
-      const tasks = sortTasks(getProject().tasks);
-
-      if (tasks.length === 0) {
-        body.innerHTML = '<div class="text-sm text-black/50">暂无任务，点击“新增任务”开始。</div>';
-        return;
-      }
-
-      const line = document.createElement("div");
-      line.className = "timeline-line";
-      body.appendChild(line);
-
-      tasks.forEach((task, idx) => {
-        const card = document.createElement("div");
-        card.className = "task-card relative rounded-lg p-4 mb-4 soft-card";
-        card.style.background = task.done ? "var(--mint)" : (todayISO() > task.deadline ? "var(--red)" : "#fff");
-
-        const dot = document.createElement("div");
-        dot.className = "dot absolute";
-        dot.style.left = "-23px";
-        dot.style.top = "18px";
-        dot.style.boxShadow = "0 0 0 2px #fff, 0 0 0 4px rgba(47,47,47,0.08)";
-        card.appendChild(dot);
-
-        const header = document.createElement("div");
-        header.className = "flex items-center justify-between gap-3";
-
-        const title = document.createElement("div");
-        title.className = "font-semibold";
-        title.textContent = task.title;
-        makeEditable(title, () => task.title, (value) => task.title = value, "click");
-
-        const meta = document.createElement("div");
-        meta.className = "deadline-text text-xs";
-        meta.textContent = `截止日期：${task.deadline}`;
-        makeDateEditable(meta, task);
-
-        const right = document.createElement("div");
-        right.className = "flex items-center gap-2";
-
-        const check = document.createElement("input");
-        check.type = "checkbox";
-        check.checked = task.done;
-        check.onchange = () => {
-          task.done = check.checked;
-          renderAll();
-        };
-
-        const del = document.createElement("button");
-        del.className = "task-delete text-xs opacity-60 hover:opacity-100 transition";
-        del.textContent = "🗑";
-        del.onclick = () => {
-          getProject().tasks = getProject().tasks.filter(item => item.id !== task.id);
-          renderAll();
-        };
-
-        right.appendChild(check);
-        right.appendChild(del);
-
-        header.appendChild(title);
-        header.appendChild(meta);
-        header.appendChild(right);
-
-        const bodyWrap = document.createElement("div");
-        bodyWrap.className = "mt-3 grid gap-3";
-
-        const remark = document.createElement("textarea");
-        remark.className = "w-full rounded-lg border border-black/10 p-2 text-sm bg-white/80";
-        remark.value = task.remark;
-        remark.placeholder = "备注栏";
-        remark.disabled = task.done;
-        remark.oninput = () => task.remark = remark.value;
-
-        const review = document.createElement("textarea");
-        review.className = "w-full rounded-lg border border-black/10 p-2 text-sm bg-white/80";
-        review.value = task.review;
-        review.placeholder = "复盘栏";
-        review.disabled = !task.done;
-        review.oninput = () => {
-          task.review = review.value;
-          renderJournal();
-          renderCalendar();
-        };
-
-        bodyWrap.appendChild(remark);
-        bodyWrap.appendChild(review);
-
-        card.appendChild(header);
-        card.appendChild(bodyWrap);
-        body.appendChild(card);
-
-        if (idx < tasks.length - 1) {
-          const next = tasks[idx + 1];
-          const intervalDays = Math.max(0, Math.round((new Date(next.deadline) - new Date(task.deadline)) / 86400000));
-          const gap = document.createElement("div");
-          gap.className = "text-center text-xs text-black/50 cursor-pointer py-2";
-          gap.textContent = `${intervalDays} 天数间隔 · 点击在此添加任务`;
-          gap.onclick = () => {
-            const title = prompt("目标名称");
-            if (!title) return;
-            const suggestion = task.deadline;
-            const deadline = prompt("截止日期 (YYYY-MM-DD)", suggestion);
-            if (!deadline) return;
-            getProject().tasks.push({
-              id: "t" + Math.random().toString(36).slice(2, 8),
-              title,
-              deadline,
-              remark: "",
-              review: "",
-              quote: "每一天的努力都算数",
-              done: false
-            });
-            renderAll();
-          };
-          body.appendChild(gap);
+        function addProject() {
+            const id = 'p' + Date.now();
+            state.projects.push({ id, title: '新项目', quote: '每一天的努力都算数', tasks: [] });
+            state.activeId = id;
+            save();
         }
-      });
-    }
 
-    function addTask() {
-      const title = prompt("目标名称");
-      if (!title) return;
-      const deadline = prompt("截止日期 (YYYY-MM-DD)", todayISO());
-      if (!deadline) return;
-      getProject().tasks.push({
-        id: "t" + Math.random().toString(36).slice(2, 8),
-        title,
-        deadline,
-        remark: "",
-        review: "",
-        quote: "每一天的努力都算数",
-        done: false
-      });
-      renderAll();
-    }
+        function setTab(t) { state.tab = t; render(); }
 
-    function renderCalendar() {
-      const grid = $("#calGrid");
-      grid.innerHTML = "";
-      const now = new Date();
-      const base = new Date(now.getFullYear(), now.getMonth() + state.monthOffset, 1);
-      const year = base.getFullYear();
-      const month = base.getMonth();
-      $("#calTitle").textContent = `${base.toLocaleString("zh-CN", { month: "long" })} ${year}`;
+        function render() {
+            const project = state.projects.find(p => p.id === state.activeId);
+            
+            // 侧边栏
+            document.getElementById('project-list').innerHTML = state.projects.map(p => `
+                <div onclick="state.activeId='${p.id}'; render();" 
+                     class="p-5 rounded-[2rem] cursor-pointer transition-all ${state.activeId === p.id ? 'bg-white shadow-xl scale-105' : 'hover:bg-white/40'}">
+                    <div class="text-sm font-bold text-gray-600">${p.title}</div>
+                </div>
+            `).join('');
 
-      const firstDay = new Date(year, month, 1).getDay();
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      const totalCells = firstDay + daysInMonth;
+            // 标题
+            document.getElementById('project-header').innerHTML = `
+                <input onchange="updateTitle(this.value)" class="text-5xl font-serif font-bold bg-transparent border-none outline-none" value="${project?.title || ''}">
+            `;
 
-      for (let i = 0; i < totalCells; i++) {
-        const cell = document.createElement("div");
-        cell.className = "rounded-lg bg-[#F9F9F9] min-h-[92px] p-2 relative";
-        if (i >= firstDay) {
-          const day = i - firstDay + 1;
-          const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+            // Tab 状态
+            document.getElementById('tab-t').className = `px-8 py-2 rounded-full text-xs font-bold transition-all ${state.tab==='timeline' ? 'bg-gray-800 text-white' : 'text-gray-400'}`;
+            document.getElementById('tab-j').className = `px-8 py-2 rounded-full text-xs font-bold transition-all ${state.tab==='journal' ? 'bg-gray-800 text-white' : 'text-gray-400'}`;
 
-          const dayEl = document.createElement("div");
-          dayEl.className = "text-xs text-black/60";
-          dayEl.textContent = day;
-          cell.appendChild(dayEl);
-
-          if (dateStr === todayISO()) {
-            cell.style.outline = "2px solid var(--blue)";
-          }
-
-          const dots = document.createElement("div");
-          dots.className = "flex flex-wrap gap-2 mt-3";
-          const tasks = getProject().tasks.filter(t => t.deadline === dateStr);
-          tasks.forEach(t => {
-            const dot = document.createElement("span");
-            dot.className = "cal-dot";
-            dot.style.background = statusColor(t);
-            dots.appendChild(dot);
-          });
-          cell.appendChild(dots);
+            // 内容
+            const content = document.getElementById('content');
+            if (state.tab === 'timeline') {
+                content.innerHTML = `
+                    <div class="max-w-2xl space-y-10 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gray-200">
+                        ${project.tasks.map((t, i) => `
+                            <div class="relative pl-12">
+                                <div class="dot absolute left-0 top-2" style="background: ${t.completed ? '#C1D2C1' : '#DBCAB5'}"></div>
+                                <div class="glass p-8 rounded-[3rem] shadow-sm border-white">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <input class="text-xl font-bold bg-transparent outline-none" value="${t.title}" onchange="updateTask(${i}, 'title', this.value)">
+                                        <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask(${i})" class="w-6 h-6 rounded-full accent-gray-700">
+                                    </div>
+                                    <textarea class="w-full bg-gray-50/50 p-4 rounded-2xl text-sm text-gray-500 outline-none" onchange="updateTask(${i}, 'review', this.value)" placeholder="在这里写下复盘感悟...">${t.review}</textarea>
+                                </div>
+                            </div>
+                        `).join('')}
+                        <button onclick="addTask()" class="ml-12 w-full py-4 border-2 border-dashed border-gray-200 rounded-[3rem] text-gray-400">+ 新增任务</button>
+                    </div>
+                `;
+            } else {
+                content.innerHTML = `
+                    <div class="max-w-xl mx-auto journal-paper p-16 rounded-[4rem] shadow-2xl min-h-[600px] border border-white flex flex-col">
+                        <div class="mb-12 border-b border-gray-100 pb-8 flex justify-between items-end">
+                            <h3 class="text-4xl font-serif italic text-gray-800">Journal.</h3>
+                            <span class="text-[10px] font-black tracking-widest text-gray-300">EST. 2026</span>
+                        </div>
+                        <div class="flex-1 space-y-12">
+                            ${project.tasks.filter(t => t.completed).map(t => `
+                                <div class="border-l-2 border-gray-100 pl-8 ml-2">
+                                    <h4 class="text-[10px] uppercase font-black text-[#ADC4D4] mb-2 tracking-widest">${t.title}</h4>
+                                    <p class="text-2xl font-handwriting leading-relaxed text-gray-700">${t.review || '这一天留下了美好的足迹。'}</p >
+                                </div>
+                            `).join('') || '<div class="text-center py-20 text-gray-300 italic">在时间轴完成任务，感悟会出现在这里</div>'}
+                        </div>
+                        <div class="mt-20 text-center border-t border-gray-50 pt-8">
+                            <input class="w-full text-center font-handwriting text-xl text-gray-400 bg-transparent outline-none" value="${project.quote}" onchange="updateQuote(this.value)">
+                        </div>
+                    </div>
+                `;
+            }
         }
-        grid.appendChild(cell);
-      }
-    }
 
-    function renderJournal() {
-      const grid = $("#journalGrid");
-      grid.innerHTML = "";
-      const tasks = sortTasks(getProject().tasks).filter(t => t.review);
-      if (tasks.length === 0) {
-        grid.innerHTML = '<div class="text-sm text-black/50">暂无复盘内容。</div>';
-        return;
-      }
+        // 修改函数
+        function updateTitle(v) { state.projects.find(p=>p.id===state.activeId).title = v; save(); }
+        function updateQuote(v) { state.projects.find(p=>p.id===state.activeId).quote = v; save(); }
+        function toggleTask(i) { state.projects.find(p=>p.id===state.activeId).tasks[i].completed = !state.projects.find(p=>p.id===state.activeId).tasks[i].completed; save(); }
+        function updateTask(i, f, v) { state.projects.find(p=>p.id===state.activeId).tasks[i][f] = v; save(); }
+        function addTask() { state.projects.find(p=>p.id===state.activeId).tasks.push({title:'新任务', completed:false, review:''}); save(); }
 
-      tasks.forEach(t => {
-        // 复盘卡片
-        const card = document.createElement("div");
-        card.className = "journal-card";
-
-        const header = document.createElement("div");
-        header.className = "flex items-start justify-between gap-4";
-
-        const title = document.createElement("div");
-        title.className = "text-lg font-semibold journal-hand";
-        title.textContent = t.title;
-
-        const dateBadge = document.createElement("div");
-        dateBadge.className = "date-badge";
-        dateBadge.textContent = t.deadline.split("-").slice(1).join("/");
-
-        header.appendChild(title);
-        header.appendChild(dateBadge);
-
-        const meta = document.createElement("div");
-        meta.className = "text-xs text-black/60 mt-1";
-        meta.textContent = `日期：${t.deadline}`;
-
-        const reviewWrap = document.createElement("div");
-        reviewWrap.className = "ornate-frame mt-3";
-
-        const review = document.createElement("p");
-        review.className = "text-sm leading-relaxed relative z-10";
-        review.textContent = t.review;
-
-        reviewWrap.appendChild(review);
-
-        const quoteWrap = document.createElement("div");
-        quoteWrap.className = "mt-4";
-
-        const line = document.createElement("div");
-        line.className = "doodle-line";
-
-        const quote = document.createElement("div");
-        quote.className = "mt-2 text-xs journal-hand quote-editable";
-        quote.textContent = t.quote || "每一天的努力都算数";
-        makeEditable(quote, () => t.quote || "每一天的努力都算数", (value) => t.quote = value, "click");
-
-        quoteWrap.appendChild(line);
-        quoteWrap.appendChild(quote);
-
-        card.appendChild(header);
-        card.appendChild(meta);
-        card.appendChild(reviewWrap);
-        card.appendChild(quoteWrap);
-
-        grid.appendChild(card);
-      });
-    }
-
-    function renderAll() {
-      renderProjects();
-      renderTimeline();
-      renderCalendar();
-      renderJournal();
-    }
-
-    // 标签切换
-    document.querySelectorAll(".tab-btn").forEach(btn => {
-      btn.onclick = () => {
-        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-        document.querySelectorAll(".panel").forEach(p => p.classList.add("hidden"));
-        btn.classList.add("active");
-        $("#" + btn.dataset.tab).classList.remove("hidden");
-        state.currentTab = btn.dataset.tab;
-      };
-    });
-
-    // 新增项目
-    $("#addProjectBtn").onclick = () => {
-      const name = prompt("项目名称");
-      if (!name) return;
-      state.projects.push({ id: "p" + Math.random().toString(36).slice(2, 8), name, tasks: [] });
-      state.currentProjectId = state.projects[state.projects.length - 1].id;
-      renderAll();
-    };
-
-    // 背景面板逻辑
-    const bgToggle = $("#bgToggle");
-    const bgPanel = $("#bgPanel");
-    bgToggle.onclick = () => {
-      bgPanel.classList.toggle("show");
-    };
-
-    document.addEventListener("click", (e) => {
-      if (!bgPanel.contains(e.target) && e.target !== bgToggle) {
-        bgPanel.classList.remove("show");
-      }
-    });
-
-    document.querySelectorAll(".bg-swatch").forEach(btn => {
-      btn.onclick = () => {
-        const value = btn.dataset.value;
-        applyBackground(value);
-      };
-    });
-
-    $("#bgArt").onclick = () => {
-      const art = "radial-gradient(260px 200px at 20% 20%, rgba(173, 196, 212, 0.45), transparent 70%)," +
-                  "radial-gradient(240px 210px at 80% 15%, rgba(223, 214, 219, 0.45), transparent 72%)," +
-                  "radial-gradient(300px 240px at 30% 80%, rgba(219, 202, 181, 0.45), transparent 75%)," +
-                  "radial-gradient(260px 220px at 80% 80%, rgba(193, 210, 193, 0.4), transparent 70%)," +
-                  "#F7F5F2";
-      applyBackground(art);
-    };
-
-    $("#bgApply").onclick = () => {
-      const url = $("#bgUrl").value.trim();
-      if (!url) return;
-      const value = `url('${url}') center/cover no-repeat fixed`;
-      applyBackground(value);
-    };
-
-    // 新增任务
-    $("#addTaskBtn").onclick = addTask;
-    // 月份切换
-    $("#prevMonth").onclick = () => { state.monthOffset--; renderCalendar(); };
-    $("#nextMonth").onclick = () => { state.monthOffset++; renderCalendar(); };
-
-    renderAll();
-  </script>
+        render();
+    </script>
 </body>
 </html>
