@@ -3,34 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的莫兰迪手帐</title>
+    <title>我的莫兰迪全功能手帐</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap');
         
         :root {
             --mint: #C1D2C1; --orange: #DBCAB5; --mauve: #DFD6DB;
-            --blue: #ADC4D4; --red: #E2A6A1;
+            --blue: #ADC4D4; --red: #E2A6A1; --bg: #F9F9F9;
         }
 
         body {
-            /* 使用你提供的油画质感背景图作为底色 */
-            background: #F9F9F9;
-            font-family: -apple-system, sans-serif;
+            background-color: var(--bg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             overflow: hidden;
+            transition: background 0.5s ease;
         }
 
         .glass {
-            background: rgba(255, 255, 255, 0.7);
+            background: rgba(255, 255, 255, 0.75);
             backdrop-filter: blur(15px);
             border: 1px solid rgba(255, 255, 255, 0.4);
         }
 
-        /* 邮戳印章效果 - 模拟你提供的素材图 1000021443 */
+        .font-handwriting { font-family: 'Ma+Shan+Zheng', cursive; }
+
+        /* 邮戳印章 */
         .postmark-seal {
-            width: 120px;
-            height: 120px;
-            border: 2px solid rgba(139, 115, 85, 0.2);
+            width: 130px;
+            height: 130px;
+            border: 1.5px dashed rgba(139, 115, 85, 0.25);
             border-radius: 50%;
             position: absolute;
             top: 40px;
@@ -38,50 +40,63 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transform: rotate(15deg);
+            transform: rotate(12deg);
             pointer-events: none;
+            z-index: 10;
         }
 
-        .postmark-content {
+        .postmark-inner {
             border: 1px solid rgba(139, 115, 85, 0.2);
             border-radius: 50%;
-            width: 90%;
-            height: 90%;
+            width: 85%;
+            height: 85%;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-size: 8px;
-            color: rgba(139, 115, 85, 0.4);
+            font-size: 9px;
+            color: rgba(139, 115, 85, 0.35);
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
         }
 
-        .font-handwriting { font-family: 'Ma+Shan+Zheng', cursive; }
-
-        /* 时间轴圆点 */
-        .dot {
-            width: 12px;
-            height: 12px;
+        /* 日历样式 */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .calendar-day:hover { background: white; shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .has-task::after {
+            content: '';
+            position: absolute;
+            bottom: 6px;
+            width: 4px;
+            height: 4px;
             border-radius: 50%;
-            border: 2px solid white;
-            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+            background: var(--blue);
         }
 
-        .journal-paper {
-            background: #fff;
-            background-image: radial-gradient(#e5e5e5 1px, transparent 1px);
-            background-size: 20px 20px;
-        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="h-screen flex">
 
-    <!-- 侧边栏：项目列表 -->
-    <aside class="w-80 h-full glass border-r p-8 flex flex-col z-20">
+    <!-- 侧边栏 -->
+    <aside class="w-72 h-full glass border-r p-8 flex flex-col z-20">
         <h1 class="text-3xl font-serif italic mb-12 tracking-tighter">Handy.</h1>
-        <div id="project-list" class="flex-1 space-y-4 overflow-y-auto pr-2">
-            <!-- 项目列表 -->
+        <div id="project-list" class="flex-1 space-y-4 overflow-y-auto no-scrollbar pr-1">
+            <!-- 项目列表加载 -->
         </div>
         <button onclick="addProject()" class="mt-8 w-full py-4 rounded-full text-white font-bold shadow-lg active:scale-95 transition-all bg-[#ADC4D4]">
             + 新增项目
@@ -90,126 +105,177 @@
 
     <!-- 主展示区 -->
     <main class="flex-1 flex flex-col relative overflow-hidden">
-        <!-- 模拟你提供的邮戳素材 -->
         <div class="postmark-seal">
-            <div class="postmark-content">
+            <div class="postmark-inner">
                 <span class="font-bold">Post Office</span>
-                <span class="my-1">2026.03</span>
-                <span>Paris, FR</span>
+                <span class="my-1">2026.02</span>
+                <span>MEMORIES</span>
             </div>
         </div>
 
-        <header class="p-12 flex justify-between items-end">
-            <div id="project-header">
-                <!-- 动态标题 -->
-            </div>
+        <header class="p-10 flex justify-between items-end z-10">
+            <div id="project-header"></div>
             <nav class="flex glass p-1 rounded-full border border-white/50 shadow-sm">
-                <button onclick="setTab('timeline')" id="tab-t" class="px-8 py-2 rounded-full text-xs font-bold tracking-widest transition-all">时间轴</button>
-                <button onclick="setTab('journal')" id="tab-j" class="px-8 py-2 rounded-full text-xs font-bold tracking-widest transition-all">电子日记</button>
+                <button onclick="setTab('timeline')" id="tab-t" class="px-6 py-2 rounded-full text-xs font-bold tracking-widest transition-all">时间轴</button>
+                <button onclick="setTab('calendar')" id="tab-c" class="px-6 py-2 rounded-full text-xs font-bold tracking-widest transition-all">月视图</button>
+                <button onclick="setTab('journal')" id="tab-j" class="px-6 py-2 rounded-full text-xs font-bold tracking-widest transition-all">电子日记</button>
             </nav>
         </header>
 
-        <section id="content" class="flex-1 overflow-y-auto px-12 pb-12">
-            <!-- 动态内容 -->
+        <section id="content" class="flex-1 overflow-y-auto px-10 pb-10 no-scrollbar">
+            <!-- 内容动态渲染 -->
         </section>
     </main>
 
     <script>
-        let state = JSON.parse(localStorage.getItem('morandi_diary')) || {
+        // 1. 初始化数据
+        let state = JSON.parse(localStorage.getItem('full_feature_diary')) || {
             activeId: 'p1',
             tab: 'timeline',
             projects: [{
-                id: 'p1', title: '我的项目 1', quote: '愿你眼中总有光芒，活成你想要的模样。',
+                id: 'p1', title: '我的第一本手帐', quote: '愿你眼中总有光芒，活成你想要的模样。',
                 tasks: [
-                    { title: '复盘会议', deadline: '2026-03-05', completed: true, review: '节奏不错；下次请更清晰地总结结论。' },
-                    { title: '学习冲刺', deadline: '2026-03-10', completed: false, review: '' }
+                    { title: '完成网页搭建', date: '2026-02-27', completed: true, review: '今天终于把网页上传到了 GitHub，很有成就感！' },
+                    { title: '设计新功能', date: '2026-02-28', completed: false, review: '' }
                 ]
             }]
         };
 
         function save() { 
-            localStorage.setItem('morandi_diary', JSON.stringify(state)); 
+            localStorage.setItem('full_feature_diary', JSON.stringify(state)); 
             render(); 
         }
 
-        function addProject() {
+        // 2. 核心功能
+        window.addProject = () => {
             const id = 'p' + Date.now();
             state.projects.push({ id, title: '新项目', quote: '每一天的努力都算数', tasks: [] });
             state.activeId = id;
             save();
-        }
+        };
 
-        function setTab(t) { state.tab = t; render(); }
+        window.setTab = (t) => { state.tab = t; render(); };
 
+        window.addTask = () => {
+            const proj = state.projects.find(p => p.id === state.activeId);
+            const today = new Date().toISOString().split('T')[0];
+            proj.tasks.push({ title: '新任务', date: today, completed: false, review: '' });
+            save();
+        };
+
+        // 3. 渲染逻辑
         function render() {
             const project = state.projects.find(p => p.id === state.activeId);
-            
-            // 侧边栏
+            if(!project) return;
+
+            // 渲染侧边栏
             document.getElementById('project-list').innerHTML = state.projects.map(p => `
                 <div onclick="state.activeId='${p.id}'; render();" 
-                     class="p-5 rounded-[2rem] cursor-pointer transition-all ${state.activeId === p.id ? 'bg-white shadow-xl scale-105' : 'hover:bg-white/40'}">
-                    <div class="text-sm font-bold text-gray-600">${p.title}</div>
+                     class="p-4 rounded-[1.5rem] cursor-pointer transition-all ${state.activeId === p.id ? 'bg-white shadow-md scale-105' : 'hover:bg-white/40'}">
+                    <div class="text-sm font-bold text-gray-600 truncate">${p.title}</div>
                 </div>
             `).join('');
 
-            // 标题
+            // 渲染页眉
             document.getElementById('project-header').innerHTML = `
-                <input onchange="updateTitle(this.value)" class="text-5xl font-serif font-bold bg-transparent border-none outline-none" value="${project?.title || ''}">
+                <input onchange="updateTitle(this.value)" class="text-4xl font-serif font-bold bg-transparent border-none outline-none" value="${project.title}">
+                <p class="text-gray-400 mt-1 text-xs italic tracking-[0.2em] uppercase">Daily Archives</p >
             `;
 
-            // Tab 状态
-            document.getElementById('tab-t').className = `px-8 py-2 rounded-full text-xs font-bold transition-all ${state.tab==='timeline' ? 'bg-gray-800 text-white' : 'text-gray-400'}`;
-            document.getElementById('tab-j').className = `px-8 py-2 rounded-full text-xs font-bold transition-all ${state.tab==='journal' ? 'bg-gray-800 text-white' : 'text-gray-400'}`;
+            // 切换 Tab 按钮样式
+            const tabs = { 'timeline': 'tab-t', 'calendar': 'tab-c', 'journal': 'tab-j' };
+            Object.values(tabs).forEach(id => document.getElementById(id).className = "px-6 py-2 rounded-full text-xs font-bold tracking-widest transition-all text-gray-400");
+            document.getElementById(tabs[state.tab]).className = "px-6 py-2 rounded-full text-xs font-bold tracking-widest transition-all bg-gray-800 text-white shadow-lg";
 
-            // 内容
-            const content = document.getElementById('content');
+            const container = document.getElementById('content');
+            
             if (state.tab === 'timeline') {
-                content.innerHTML = `
-                    <div class="max-w-2xl space-y-10 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gray-200">
+                container.innerHTML = `
+                    <div class="max-w-2xl space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[1.5px] before:bg-gray-200">
                         ${project.tasks.map((t, i) => `
-                            <div class="relative pl-12">
-                                <div class="dot absolute left-0 top-2" style="background: ${t.completed ? '#C1D2C1' : '#DBCAB5'}"></div>
-                                <div class="glass p-8 rounded-[3rem] shadow-sm border-white">
-                                    <div class="flex justify-between items-center mb-4">
-                                        <input class="text-xl font-bold bg-transparent outline-none" value="${t.title}" onchange="updateTask(${i}, 'title', this.value)">
-                                        <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask(${i})" class="w-6 h-6 rounded-full accent-gray-700">
+                            <div class="relative pl-10">
+                                <div class="absolute left-0 top-2 w-3 h-3 rounded-full border-2 border-white shadow-sm" style="background: ${t.completed ? '#C1D2C1' : '#DBCAB5'}"></div>
+                                <div class="glass p-6 rounded-[2rem] shadow-sm">
+                                    <div class="flex justify-between items-center mb-3">
+                                        <input class="font-bold bg-transparent outline-none flex-1" value="${t.title}" onchange="updateTask(${i}, 'title', this.value)">
+                                        <input type="date" class="text-[10px] font-bold text-[#ADC4D4] bg-transparent outline-none" value="${t.date}" onchange="updateTask(${i}, 'date', this.value)">
+                                        <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask(${i})" class="ml-4 w-4 h-4 rounded-full accent-gray-700">
                                     </div>
-                                    <textarea class="w-full bg-gray-50/50 p-4 rounded-2xl text-sm text-gray-500 outline-none" onchange="updateTask(${i}, 'review', this.value)" placeholder="在这里写下复盘感悟...">${t.review}</textarea>
+                                    <textarea class="w-full bg-gray-50/50 p-3 rounded-xl text-xs text-gray-500 outline-none h-16 resize-none" onchange="updateTask(${i}, 'review', this.value)" placeholder="感悟...">${t.review}</textarea>
                                 </div>
                             </div>
                         `).join('')}
-                        <button onclick="addTask()" class="ml-12 w-full py-4 border-2 border-dashed border-gray-200 rounded-[3rem] text-gray-400">+ 新增任务</button>
+                        <button onclick="addTask()" class="ml-10 w-full py-3 border-2 border-dashed border-gray-200 rounded-[2rem] text-gray-400 text-sm hover:border-gray-400 transition-all">+ 新增任务项</button>
                     </div>
                 `;
+            } else if (state.tab === 'calendar') {
+                container.innerHTML = renderCalendar(project);
             } else {
-                content.innerHTML = `
-                    <div class="max-w-xl mx-auto journal-paper p-16 rounded-[4rem] shadow-2xl min-h-[600px] border border-white flex flex-col">
-                        <div class="mb-12 border-b border-gray-100 pb-8 flex justify-between items-end">
-                            <h3 class="text-4xl font-serif italic text-gray-800">Journal.</h3>
-                            <span class="text-[10px] font-black tracking-widest text-gray-300">EST. 2026</span>
+                container.innerHTML = `
+                    <div class="max-w-xl mx-auto glass p-12 rounded-[3.5rem] shadow-2xl min-h-[500px] flex flex-col border-white">
+                        <div class="mb-10 border-b border-gray-100 pb-6 flex justify-between items-end">
+                            <h3 class="text-4xl font-serif italic text-gray-800 tracking-tighter text-shadow-sm">Journal.</h3>
                         </div>
-                        <div class="flex-1 space-y-12">
-                            ${project.tasks.filter(t => t.completed).map(t => `
-                                <div class="border-l-2 border-gray-100 pl-8 ml-2">
-                                    <h4 class="text-[10px] uppercase font-black text-[#ADC4D4] mb-2 tracking-widest">${t.title}</h4>
-                                    <p class="text-2xl font-handwriting leading-relaxed text-gray-700">${t.review || '这一天留下了美好的足迹。'}</p >
+                        <div class="flex-1 space-y-10">
+                            ${project.tasks.filter(t => t.completed && t.review).map(t => `
+                                <div class="border-l-2 border-gray-100 pl-6">
+                                    <h4 class="text-[9px] uppercase font-black text-[#ADC4D4] mb-1 tracking-widest">${t.date} | ${t.title}</h4>
+                                    <p class="text-xl font-handwriting leading-relaxed text-gray-600">${t.review}</p >
                                 </div>
-                            `).join('') || '<div class="text-center py-20 text-gray-300 italic">在时间轴完成任务，感悟会出现在这里</div>'}
+                            `).join('') || '<div class="text-center py-20 text-gray-300 italic">完成任务后，在这里留下你的文字</div>'}
                         </div>
-                        <div class="mt-20 text-center border-t border-gray-50 pt-8">
-                            <input class="w-full text-center font-handwriting text-xl text-gray-400 bg-transparent outline-none" value="${project.quote}" onchange="updateQuote(this.value)">
+                        <div class="mt-16 text-center pt-6 border-t border-gray-50">
+                            <input class="w-full text-center font-handwriting text-lg text-gray-400 bg-transparent outline-none" value="${project.quote}" onchange="updateQuote(this.value)">
                         </div>
                     </div>
                 `;
             }
         }
 
-        // 修改函数
-        function updateTitle(v) { state.projects.find(p=>p.id===state.activeId).title = v; save(); }
-        function updateQuote(v) { state.projects.find(p=>p.id===state.activeId).quote = v; save(); }
-        function toggleTask(i) { state.projects.find(p=>p.id===state.activeId).tasks[i].completed = !state.projects.find(p=>p.id===state.activeId).tasks[i].completed; save(); }
-        function updateTask(i, f, v) { state.projects.find(p=>p.id===state.activeId).tasks[i][f] = v; save(); }
-        function addTask() { state.projects.find(p=>p.id===state.activeId).tasks.push({title:'新任务', completed:false, review:''}); save(); }
+        // 日历渲染器
+        function renderCalendar(project) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const firstDay = new Date(year, month, 1).getDay();
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+            let html = `
+                <div class="max-w-md mx-auto glass p-8 rounded-[2.5rem] shadow-lg">
+                    <div class="flex justify-between items-center mb-8">
+                        <h4 class="text-xl font-serif font-bold text-gray-700">${monthNames[month]} ${year}</h4>
+                    </div>
+                    <div class="calendar-grid text-[10px] font-black text-gray-300 mb-4 text-center">
+                        <span>SUN</span><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span>
+                    </div>
+                    <div class="calendar-grid">
+            `;
+
+            for (let i = 0; i < firstDay; i++) html += `<div></div>`;
+            
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const hasTask = project.tasks.some(t => t.date === dateStr);
+                const isToday = d === now.getDate();
+                html += `
+                    <div class="calendar-day relative ${isToday ? 'bg-gray-800 text-white' : ''} ${hasTask ? 'font-bold' : 'text-gray-400'}" 
+                         onclick="alert('这一天有 ${project.tasks.filter(t => t.date === dateStr).length} 个任务')">
+                        ${d}
+                        ${hasTask && !isToday ? '<div class="absolute bottom-1.5 w-1 h-1 bg-[#ADC4D4] rounded-full"></div>' : ''}
+                    </div>
+                `;
+            }
+
+            html += `</div></div>`;
+            return html;
+        }
+
+        // 修改更新函数
+        window.updateTitle = (v) => { state.projects.find(p=>p.id===state.activeId).title = v; save(); };
+        window.updateQuote = (v) => { state.projects.find(p=>p.id===state.activeId).quote = v; save(); };
+        window.toggleTask = (i) => { state.projects.find(p=>p.id===state.activeId).tasks[i].completed = !state.projects.find(p=>p.id===state.activeId).tasks[i].completed; save(); };
+        window.updateTask = (i, f, v) => { state.projects.find(p=>p.id===state.activeId).tasks[i][f] = v; save(); };
 
         render();
     </script>
