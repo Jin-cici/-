@@ -15,6 +15,7 @@
       --red: #E2A6A1;
       --ink: #2F2F2F;
       --bg: #F7F5F2;
+      --sidebar-width: 260px;
       --app-bg: radial-gradient(circle at 20% 20%, #F1EEE9 0%, var(--bg) 60%),
                 radial-gradient(circle at 80% 0%, #ECE6E1 0%, var(--bg) 55%);
     }
@@ -24,6 +25,29 @@
       color: var(--ink);
       background: var(--app-bg);
       transition: background 0.5s ease;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: var(--sidebar-width) 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar-collapsed {
+      --sidebar-width: 64px;
+    }
+
+    .sidebar-collapsed #sidebar {
+      padding-left: 12px;
+      padding-right: 12px;
+    }
+
+    .sidebar-collapsed .sidebar-title,
+    .sidebar-collapsed #projectList,
+    .sidebar-collapsed #addProjectBtn,
+    .sidebar-collapsed #bgToggle,
+    .sidebar-collapsed #bgPanel {
+      display: none;
     }
 
     button,
@@ -367,11 +391,14 @@
 </head>
 <body class="min-h-screen">
   <div id="overlay" class="overlay"></div>
-  <div class="grid min-h-screen" style="grid-template-columns: 260px 1fr;">
+  <div class="app">
     <aside id="sidebar" class="sidebar p-5 border-r border-black/5 relative" style="background: var(--mauve);">
       <div class="flex items-center justify-between mb-3">
-        <div class="text-lg font-semibold tracking-wide">我的项目</div>
-        <button id="bgToggle" class="w-8 h-8 rounded-full bg-white/70 border border-black/10 flex items-center justify-center" title="自定义背景">🎨</button>
+        <div class="text-lg font-semibold tracking-wide sidebar-title">我的项目</div>
+        <div class="flex items-center gap-2">
+          <button id="collapseToggle" class="w-8 h-8 rounded-full bg-white/70 border border-black/10 flex items-center justify-center" title="折叠侧边栏">≪</button>
+          <button id="bgToggle" class="w-8 h-8 rounded-full bg-white/70 border border-black/10 flex items-center justify-center" title="自定义背景">🎨</button>
+        </div>
       </div>
       <div id="bgPanel" class="bg-panel">
         <div class="bg-label">莫兰迪纯色</div>
@@ -904,8 +931,13 @@
     };
 
     // 背景面板逻辑
+    const collapseToggle = $("#collapseToggle");
     const bgToggle = $("#bgToggle");
     const bgPanel = $("#bgPanel");
+    collapseToggle.onclick = (e) => {
+      e.stopPropagation();
+      document.body.classList.toggle("sidebar-collapsed");
+    };
     bgToggle.onclick = () => {
       bgPanel.classList.toggle("show");
     };
