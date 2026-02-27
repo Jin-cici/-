@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>日程管理 - Morandi</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -24,6 +24,12 @@
       color: var(--ink);
       background: var(--app-bg);
       transition: background 0.5s ease;
+    }
+
+    button,
+    .tab-btn {
+      min-height: 44px;
+      min-width: 44px;
     }
 
     .soft-card {
@@ -272,10 +278,6 @@
       cursor: pointer;
     }
 
-    .deadline-text::before {
-      content: "";
-    }
-
     .deadline-input {
       border: 1px solid rgba(47, 47, 47, 0.18);
       border-radius: 8px;
@@ -325,14 +327,48 @@
       font-size: 12px;
       background: #fff;
     }
+
+    /* 移动端侧边栏 */
+    .sidebar {
+      transition: transform 0.3s ease;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 260px;
+        transform: translateX(-100%);
+        z-index: 60;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.35);
+        z-index: 55;
+        display: none;
+      }
+
+      .overlay.show {
+        display: block;
+      }
+    }
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Caveat:wght@500;600&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
 </head>
 <body class="min-h-screen">
+  <div id="overlay" class="overlay"></div>
   <div class="grid min-h-screen" style="grid-template-columns: 260px 1fr;">
-    <aside class="p-5 border-r border-black/5 relative" style="background: var(--mauve);">
+    <aside id="sidebar" class="sidebar p-5 border-r border-black/5 relative" style="background: var(--mauve);">
       <div class="flex items-center justify-between mb-3">
         <div class="text-lg font-semibold tracking-wide">我的项目</div>
         <button id="bgToggle" class="w-8 h-8 rounded-full bg-white/70 border border-black/10 flex items-center justify-center" title="自定义背景">🎨</button>
@@ -348,8 +384,7 @@
         <div class="bg-label">艺术渐变</div>
         <button id="bgArt" class="w-full rounded-lg px-2 py-1 text-xs font-semibold" style="background: var(--blue);">应用艺术渐变</button>
         <div class="bg-label">自定义图片</div>
-        <input id="bgUrl" class="bg-input" placeholder="粘贴图片 URL" />
-        <button id="bgApply" class="w-full rounded-lg px-2 py-1 text-xs font-semibold mt-2" style="background: var(--cream);">应用图片背景</button>
+        <input id="bgFile" class="bg-input" type="file" accept="image/*" />
       </div>
       <ul id="projectList" class="space-y-2 mb-4"></ul>
       <button id="addProjectBtn" class="w-full rounded-lg px-3 py-2 font-semibold text-sm" style="background: var(--blue);">新增项目</button>
@@ -357,7 +392,10 @@
 
     <main class="p-6">
       <div class="flex items-center justify-between mb-4">
-        <div id="projectTitle" class="text-2xl font-semibold">我的项目</div>
+        <div class="flex items-center gap-3">
+          <button id="menuToggle" class="md:hidden w-10 h-10 rounded-lg border border-black/10 bg-white/70">≡</button>
+          <div id="projectTitle" class="text-2xl font-semibold">我的项目</div>
+        </div>
         <div class="flex gap-2">
           <button class="tab-btn active rounded-full border border-black/10 px-4 py-2 text-sm" data-tab="timeline">时间轴</button>
           <button class="tab-btn rounded-full border border-black/10 px-4 py-2 text-sm" data-tab="calendar">月视图</button>
@@ -420,7 +458,41 @@
       isRenaming: false
     };
 
+    const STORAGE_KEY = "morandi_schedule_state_v1";
+    const BG_KEY = "morandi_schedule_bg_v1";
     const $ = (sel) => document.querySelector(sel);
+
+    function loadState() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.projects) {
+          state.projects = parsed.projects;
+          state.currentProjectId = parsed.currentProjectId || state.projects[0]?.id || "p1";
+          state.monthOffset = parsed.monthOffset || 0;
+        }
+      } catch (err) {
+        // 忽略损坏数据
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        projects: state.projects,
+        currentProjectId: state.currentProjectId,
+        monthOffset: state.monthOffset
+      }));
+    }
+
+    function loadBackground() {
+      const bg = localStorage.getItem(BG_KEY);
+      if (bg) applyBackground(bg, false);
+    }
+
+    function saveBackground(value) {
+      localStorage.setItem(BG_KEY, value);
+    }
 
     function todayISO() {
       const d = new Date();
@@ -445,8 +517,9 @@
     }
 
     // 背景切换
-    function applyBackground(value) {
+    function applyBackground(value, persist = true) {
       document.documentElement.style.setProperty("--app-bg", value);
+      if (persist) saveBackground(value);
     }
 
     // 通用可编辑标题（支持点击或双击触发）
@@ -507,6 +580,13 @@
       };
     }
 
+    function closeSidebar() {
+      const sidebar = $("#sidebar");
+      const overlay = $("#overlay");
+      sidebar.classList.remove("open");
+      overlay.classList.remove("show");
+    }
+
     function renderProjects() {
       const list = $("#projectList");
       list.innerHTML = "";
@@ -520,6 +600,7 @@
           if (state.isRenaming) return;
           state.currentProjectId = p.id;
           renderAll();
+          closeSidebar();
         };
 
         const name = document.createElement("div");
@@ -799,6 +880,7 @@
       renderTimeline();
       renderCalendar();
       renderJournal();
+      saveState();
     }
 
     // 标签切换
@@ -850,12 +932,24 @@
       applyBackground(art);
     };
 
-    $("#bgApply").onclick = () => {
-      const url = $("#bgUrl").value.trim();
-      if (!url) return;
-      const value = `url('${url}') center/cover no-repeat fixed`;
-      applyBackground(value);
+    $("#bgFile").onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const value = `url('${reader.result}') center/cover no-repeat fixed`;
+        applyBackground(value);
+      };
+      reader.readAsDataURL(file);
     };
+
+    // 侧边栏（移动端）
+    $("#menuToggle").onclick = () => {
+      $("#sidebar").classList.add("open");
+      $("#overlay").classList.add("show");
+    };
+
+    $("#overlay").onclick = closeSidebar;
 
     // 新增任务
     $("#addTaskBtn").onclick = addTask;
@@ -863,6 +957,8 @@
     $("#prevMonth").onclick = () => { state.monthOffset--; renderCalendar(); };
     $("#nextMonth").onclick = () => { state.monthOffset++; renderCalendar(); };
 
+    loadState();
+    loadBackground();
     renderAll();
   </script>
 </body>
