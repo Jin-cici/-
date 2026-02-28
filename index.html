@@ -371,18 +371,101 @@
       .sidebar.open {
         transform: translateX(0);
       }
+    }
 
-      .overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.35);
-        z-index: 55;
-        display: none;
-      }
+    .calendar-frame {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 520px;
+    }
 
-      .overlay.show {
-        display: block;
-      }
+    .calendar-body {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .calendar-spacer {
+      flex: 1;
+      min-height: 120px;
+    }
+
+    .cal-cell {
+      border-radius: 12px;
+      background: #F9F9F9;
+      border: 1px solid rgba(47, 47, 47, 0.12);
+      aspect-ratio: 1 / 1;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .icon-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 999px;
+      border: 1px solid rgba(47, 47, 47, 0.12);
+      background: rgba(255, 255, 255, 0.7);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      box-shadow: 0 6px 14px rgba(47, 47, 47, 0.08);
+      opacity: 0.85;
+    }
+
+    .icon-btn:hover {
+      opacity: 1;
+    }
+
+    .icon-remark {
+      background: rgba(219, 202, 181, 0.5);
+    }
+
+    .icon-review {
+      background: rgba(193, 210, 193, 0.55);
+    }
+
+    .editor-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 80;
+    }
+
+    .editor-modal.show {
+      display: flex;
+    }
+
+    .editor-panel {
+      width: min(560px, 92vw);
+      height: min(560px, 70vh);
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      border-radius: 18px;
+      border: 1px solid rgba(47, 47, 47, 0.12);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .editor-textarea {
+      flex: 1;
+      width: 100%;
+      resize: none;
+      border: 1px solid rgba(47, 47, 47, 0.18);
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 14px;
+      background: #fff;
     }
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -390,7 +473,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Caveat:wght@500;600&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
 </head>
 <body class="min-h-screen">
-  <div id="overlay" class="overlay"></div>
   <div class="app">
     <aside id="sidebar" class="sidebar p-5 border-r border-black/5 relative" style="background: var(--mauve);">
       <div class="flex items-center justify-between mb-3">
@@ -436,13 +518,24 @@
       </section>
 
       <section id="calendar" class="panel hidden glass-panel">
-        <div class="rounded-lg p-4">
-          <div class="flex items-center justify-between mb-3">
+        <div class="rounded-lg p-4 calendar-frame">
+          <div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
             <button id="prevMonth" class="rounded-lg px-3 py-2 text-sm font-semibold" style="background: var(--blue);">上个月</button>
             <div id="calTitle" class="font-semibold"></div>
+            <input id="calJump" type="month" class="rounded-lg border border-black/10 px-2 py-1 text-xs bg-white/80" />
             <button id="nextMonth" class="rounded-lg px-3 py-2 text-sm font-semibold" style="background: var(--blue);">下个月</button>
           </div>
-          <div class="grid grid-cols-7 gap-2 text-xs" id="calGrid"></div>
+          <div class="calendar-weekdays grid grid-cols-7 gap-2 text-[11px] text-black/60">
+            <div class="text-center">日</div>
+            <div class="text-center">一</div>
+            <div class="text-center">二</div>
+            <div class="text-center">三</div>
+            <div class="text-center">四</div>
+            <div class="text-center">五</div>
+            <div class="text-center">六</div>
+          </div>
+          <div class="calendar-body text-xs" id="calGrid"></div>
+          <div class="calendar-spacer"></div>
         </div>
       </section>
 
@@ -455,6 +548,17 @@
         <div class="journal-grid" id="journalGrid"></div>
       </section>
     </main>
+  </div>
+
+  <div id="editorModal" class="editor-modal">
+    <div class="editor-panel">
+      <div id="editorTitle" class="text-sm font-semibold text-black/70">编辑</div>
+      <textarea id="editorInput" class="editor-textarea"></textarea>
+      <div class="flex justify-end gap-2">
+        <button id="editorCancel" class="rounded-lg px-3 py-2 text-xs font-semibold" style="background: var(--mauve);">取消</button>
+        <button id="editorSave" class="rounded-lg px-3 py-2 text-xs font-semibold" style="background: var(--blue);">保存</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -488,6 +592,8 @@
     const STORAGE_KEY = "morandi_schedule_state_v1";
     const BG_KEY = "morandi_schedule_bg_v1";
     const $ = (sel) => document.querySelector(sel);
+    let currentEditTask = null;
+    let currentEditField = "remark";
 
     function loadState() {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -541,6 +647,21 @@
       if (overdue) return "var(--red)";
       if (task.done) return "var(--mint)";
       return "var(--cream)";
+    }
+
+    function openEditor(task, field) {
+      currentEditTask = task;
+      currentEditField = field;
+      const title = field === "remark" ? "编辑备注" : "编辑复盘";
+      $("#editorTitle").textContent = title;
+      $("#editorInput").value = task[field] || "";
+      $("#editorModal").classList.add("show");
+      $("#editorInput").focus();
+    }
+
+    function closeEditor() {
+      $("#editorModal").classList.remove("show");
+      currentEditTask = null;
     }
 
     // 背景切换
@@ -609,9 +730,7 @@
 
     function closeSidebar() {
       const sidebar = $("#sidebar");
-      const overlay = $("#overlay");
       sidebar.classList.remove("open");
-      overlay.classList.remove("show");
     }
 
     function renderProjects() {
@@ -722,28 +841,22 @@
         header.appendChild(right);
 
         const bodyWrap = document.createElement("div");
-        bodyWrap.className = "mt-3 grid gap-3";
+        bodyWrap.className = "mt-3 flex items-center gap-2";
 
-        const remark = document.createElement("textarea");
-        remark.className = "w-full rounded-lg border border-black/10 p-2 text-sm bg-white/80";
-        remark.value = task.remark;
-        remark.placeholder = "备注栏";
-        remark.disabled = task.done;
-        remark.oninput = () => task.remark = remark.value;
+        const remarkBtn = document.createElement("button");
+        remarkBtn.className = "icon-btn icon-remark";
+        remarkBtn.textContent = "RMK";
+        remarkBtn.title = "编辑备注";
+        remarkBtn.onclick = () => openEditor(task, "remark");
 
-        const review = document.createElement("textarea");
-        review.className = "w-full rounded-lg border border-black/10 p-2 text-sm bg-white/80";
-        review.value = task.review;
-        review.placeholder = "复盘栏";
-        review.disabled = !task.done;
-        review.oninput = () => {
-          task.review = review.value;
-          renderJournal();
-          renderCalendar();
-        };
+        const reviewBtn = document.createElement("button");
+        reviewBtn.className = "icon-btn icon-review";
+        reviewBtn.textContent = "RVW";
+        reviewBtn.title = "编辑复盘";
+        reviewBtn.onclick = () => openEditor(task, "review");
 
-        bodyWrap.appendChild(remark);
-        bodyWrap.appendChild(review);
+        bodyWrap.appendChild(remarkBtn);
+        bodyWrap.appendChild(reviewBtn);
 
         card.appendChild(header);
         card.appendChild(bodyWrap);
@@ -802,6 +915,7 @@
       const year = base.getFullYear();
       const month = base.getMonth();
       $("#calTitle").textContent = `${base.toLocaleString("zh-CN", { month: "long" })} ${year}`;
+      $("#calJump").value = `${year}-${String(month + 1).padStart(2, "0")}`;
 
       const firstDay = new Date(year, month, 1).getDay();
       const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -809,7 +923,7 @@
 
       for (let i = 0; i < totalCells; i++) {
         const cell = document.createElement("div");
-        cell.className = "rounded-lg bg-[#F9F9F9] min-h-[92px] p-2 relative";
+        cell.className = "cal-cell";
         if (i >= firstDay) {
           const day = i - firstDay + 1;
           const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
@@ -978,16 +1092,31 @@
     // 侧边栏（移动端）
     $("#menuToggle").onclick = () => {
       $("#sidebar").classList.add("open");
-      $("#overlay").classList.add("show");
     };
-
-    $("#overlay").onclick = closeSidebar;
 
     // 新增任务
     $("#addTaskBtn").onclick = addTask;
     // 月份切换
     $("#prevMonth").onclick = () => { state.monthOffset--; renderCalendar(); };
     $("#nextMonth").onclick = () => { state.monthOffset++; renderCalendar(); };
+    $("#calJump").onchange = () => {
+      const value = $("#calJump").value;
+      if (!value) return;
+      const [y, m] = value.split("-").map(Number);
+      const now = new Date();
+      state.monthOffset = (y - now.getFullYear()) * 12 + (m - 1 - now.getMonth());
+      renderCalendar();
+    };
+
+    $("#editorCancel").onclick = closeEditor;
+    $("#editorSave").onclick = () => {
+      if (!currentEditTask) return;
+      currentEditTask[currentEditField] = $("#editorInput").value;
+      renderJournal();
+      renderCalendar();
+      saveState();
+      closeEditor();
+    };
 
     loadState();
     loadBackground();
